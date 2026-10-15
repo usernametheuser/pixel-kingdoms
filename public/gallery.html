@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel Kingdoms Gallery</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;700&display=swap">
+<style>
+  :root { --bg: #10141f; --panel: rgba(255,255,255,0.05); --line: rgba(255,255,255,0.12); --text: #eef1f6; --dim: #9aa4b8; --gold: #f4c95d; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Pixelify Sans', system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 16px; background: rgba(16,20,31,0.94); border-bottom: 1px solid var(--line); }
+  header h1 { margin: 0; font-size: 22px; color: var(--gold); }
+  header a { color: var(--text); text-decoration: none; border: 1px solid var(--line); padding: 6px 12px; border-radius: 8px; }
+  header input { background: rgba(0,0,0,.35); border: 1px solid var(--line); color: var(--text); padding: 7px 10px; border-radius: 8px; font: inherit; min-width: 0; flex: 1; max-width: 280px; }
+  header label { color: var(--dim); font-size: 14px; display: flex; gap: 6px; align-items: center; }
+  main { padding: 8px 16px 40px; }
+  h2 { color: var(--gold); font-size: 18px; margin: 22px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; text-align: center; }
+  .card canvas { width: 100%; height: 120px; image-rendering: pixelated; display: block; }
+  .card b { display: block; font-size: 14px; margin-top: 4px; }
+  .card small { color: var(--dim); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <a href="/">🏠 Home</a>
+  <h1>Asset Gallery</h1>
+  <input id="q" placeholder="Search units, buildings, weapons…">
+  <label><input type="checkbox" id="night"> Night</label>
+</header>
+<main id="out"></main>
+<script type="module">
+import { UNITS, BUILDINGS, BUILD_CATS, UNIT_GROUPS, WEAPONS, SPRITES, PALETTE, HUMANOID, CAR_COLORS } from './shared/defs.js';
+import { vehicleArt, buildingArt, buildSprite, drawFlag, drawPrayerFlags, weaponIcon, skyAt } from './gfx.js';
+
+const COLOR = '#e04848';
+const out = document.getElementById('out');
+const cards = [];
+function card(title, sub, draw, w, h, tags) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  el.append(c);
+  el.insertAdjacentHTML('beforeend', `<b>${title}</b><small>${sub}</small>`);
+  cards.push({ el, c, draw, text: (title + ' ' + sub + ' ' + tags).toLowerCase() });
+  return el;
+}
+function section(name, items) {
+  if (!items.length) return;
+  out.insertAdjacentHTML('beforeend', `<h2>${name}</h2>`);
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  for (const it of items) grid.append(it);
+  out.append(grid);
+}
+// buildings by category
+for (const cat of BUILD_CATS) {
+  const items = Object.entries(BUILDINGS).filter(([, d]) => d.cat === cat).map(([type, d]) => {
+    const variant = type === 'road' ? 10 : 0;
+    const art = buildingArt(type, d.w, d.h, COLOR, null, variant);
+    const pad = 14;
+    return card(d.name, `${d.w}×${d.h}${d.weapon ? ' · armed' : ''}${d.produces ? ' · trains units' : ''}${d.heal ? ' · heals' : ''}`, (g, t, night) => {
+      g.drawImage(art.c, pad, pad);
+      if (night) {
+        g.fillStyle = 'rgba(10,16,48,0.6)';
+        g.fillRect(0, 0, g.canvas.width, g.canvas.height);
+        g.globalCompositeOperation = 'lighter';
+        g.drawImage(art.mask, pad, pad);
+        g.globalCompositeOperation = 'source-over';
+      }
+      for (const [fx, fy, col, shape] of art.flags) drawFlag(g, pad + fx, pad + fy, col || COLOR, t, 1, shape);
+      for (const [x0, y0, x1, y1] of art.prayer) drawPrayerFlags(g, pad + x0, pad + y0, pad + x1, pad + y1, t);
+      for (const [bx, by, col, ph] of art.blink) if (Math.floor(t * 2 + (ph || 0)) % 2 === 0) (g.fillStyle = col), g.fillRect(pad + bx, pad + by, 1, 1);
+      if (art.signal) {
+        const st = Math.floor(t / 2) % 3;
+        ['#ff3030', '#ffd030', '#30ff60'].forEach((col, i) => ((g.fillStyle = i === st ? col : '#3a3a3a'), g.fillRect(pad + art.signal[0] - 1, pad + art.signal[1] + i * 3, 2, 2)));
+      }
+      if (art.train) {
+        const ph = t % 12;
+        const x = ph < 4 ? -80 + ph * 30 : ph < 8 ? 40 : 40 + (ph - 8) * 40;
+        g.save();
+        g.beginPath();
+        g.rect(pad, pad, art.W, art.c.height);
+        g.clip();
+        drawTrainAt(g, pad + x, pad + art.train.y);
+        g.restore();
+      }
+    }, art.W + pad * 2, art.c.height + pad * 2, type + ' ' + cat);
+  });
+  section('🏗 ' + cat, items);
+}
+function drawTrainAt(g, x, y) {
+  for (let k = 0; k < 3; k++) {
+    const cx = x - k * 24;
+    g.fillStyle = '#e8e8ec';
+    g.fillRect(cx - 22, y - 4, 22, 8);
+    g.fillStyle = '#2a4ab0';
+    g.fillRect(cx - 22, y + 1, 22, 2);
+    g.fillStyle = '#22303e';
+    for (let w = 0; w < 5; w++) g.fillRect(cx - 20 + w * 4, y - 2, 2, 2);
+  }
+  g.fillStyle = '#ff9933';
+  g.fillRect(x, y - 4, 2, 8);
+}
+// units by group
+for (const grp of UNIT_GROUPS) {
+  const items = Object.entries(UNITS).filter(([, u]) => u.group === grp).map(([key, u]) => {
+    const color = u.paintVariety ? CAR_COLORS[1] : COLOR;
+    const art = u.art ? vehicleArt(u.art, color) : buildSprite(u.sprite, SPRITES[u.sprite], PALETTE, color, HUMANOID.has(u.sprite));
+    const w = Math.max(60, art.frames[0].width * 2 + 20), h = Math.max(60, art.frames[0].height * 2 + 20);
+    const wp = u.weapon ? WEAPONS[u.weapon]?.name : 'unarmed';
+    return card(u.name, `${u.kind === 'vehicle' ? u.domain : 'infantry'} · ${u.hp} hp · ${wp}${u.alt ? ' + ' + WEAPONS[u.alt].name : ''}`, (g, t) => {
+      g.imageSmoothingEnabled = false;
+      const f = art.frames[art.frames.length > 1 ? [0, 1, 0, 2][Math.floor(t * 6) % 4] : 0];
+      g.save();
+      g.translate(w / 2, h / 2);
+      g.scale(2, 2);
+      g.drawImage(f, -f.width / 2, -f.height / 2);
+      if (art.flash && Math.floor(t * 5) % 2 === 0) for (const [fx, fy, col] of art.flash) (g.fillStyle = col), g.fillRect(fx, fy - 0.5, 1, 1);
+      if (art.turret) g.drawImage(art.turret, art.tpx - art.tpivot[0], -art.tpivot[1]);
+      for (const [rx, ry, rr] of art.rotors || []) {
+        const a = t * 18;
+        g.strokeStyle = 'rgba(28,28,34,0.85)';
+        g.lineWidth = 0.7;
+        g.beginPath();
+        for (let b = 0; b < 4; b++) (g.moveTo(rx, ry), g.lineTo(rx + Math.cos(a + (b * Math.PI) / 2) * rr, ry + Math.sin(a + (b * Math.PI) / 2) * rr));
+        g.stroke();
+      }
+      g.restore();
+    }, w, h, key + ' ' + grp);
+  });
+  section('⚔ ' + grp, items);
+}
+// weapons
+section('🔫 Weapons', Object.entries(WEAPONS).filter(([, w]) => !w.hidden).map(([key, w]) => card(w.name, `${w.dmg} dmg · range ${w.range}${w.splash ? ' · splash' : ''}${w.homing ? ' · homing' : ''}`, (g) => {
+  g.imageSmoothingEnabled = false;
+  g.drawImage(weaponIcon(key), 4, 4, 48, 48);
+}, 56, 56, key)));
+
+const q = document.getElementById('q'), night = document.getElementById('night');
+q.oninput = () => {
+  const s = q.value.trim().toLowerCase();
+  for (const c of cards) c.el.style.display = !s || c.text.includes(s) ? '' : 'none';
+};
+function tick(now) {
+  const t = now / 1000;
+  for (const c of cards) {
+    if (c.el.style.display === 'none') continue;
+    const r = c.el.getBoundingClientRect();
+    if (r.bottom < 0 || r.top > innerHeight) continue;
+    const g = c.c.getContext('2d');
+    g.imageSmoothingEnabled = false;
+    g.fillStyle = night.checked ? '#1a2238' : '#4a7a3a';
+    g.fillRect(0, 0, c.c.width, c.c.height);
+    c.draw(g, t, night.checked);
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

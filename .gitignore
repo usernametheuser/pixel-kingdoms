@@ -1,0 +1,8 @@
+node_modules/
+saves/
+runtime/
+tools/cloudflared.exe
+.env
+.env.*
+backups/
+dist/

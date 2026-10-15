@@ -1,0 +1,16 @@
+# Render blueprint: one free, always-on web service for Pixel Kingdoms.
+# Render -> New -> Blueprint -> pick this repo. Keep it awake 24/7 with a free UptimeRobot
+# monitor that pings https://<your-app>.onrender.com/healthz every 5 minutes.
+services:
+  - type: web
+    name: pixel-kingdoms
+    runtime: node
+    plan: free
+    buildCommand: npm install --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: LOCAL_AI
+        value: "off"

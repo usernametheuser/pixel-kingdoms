@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixel Kingdoms</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- ===================== LOBBY ===================== -->
+<div id="lobby" class="screen">
+  <div class="lobby-box">
+    <div class="title">
+      <h1>PIXEL<span>KINGDOMS</span></h1>
+      <p class="tag">Rule a kingdom in a living open world. No levels, no limits.<br>Loyal AI armies · free towns to conquer · wildlife · alien invasions · day &amp; night · an AI Forge that builds anything you imagine.</p>
+    </div>
+    <div class="glass name-row">
+      <label>Your name</label>
+      <input id="name" maxlength="18" placeholder="King Arthur">
+      <a id="galleryLink" class="ghost sm btnlink" href="gallery.html" target="_blank" title="Browse every unit, building and weapon">📚 Gallery</a>
+      <button id="quickBtn" class="primary sm" title="Join the busiest public room with a free slot, or open a new one">⚡ Quick play online</button>
+    </div>
+
+    <div id="continueBox" class="glass panel continue hidden">
+      <h2>Continue</h2>
+      <div id="saveList"></div>
+    </div>
+
+    <div class="cols">
+      <div class="glass panel">
+        <h2>Create a room</h2>
+        <label>Room name</label>
+        <input id="roomName" maxlength="30" placeholder="My realm">
+        <label>Format</label>
+        <div class="seg" id="modeSeg">
+          <button data-v="duo" data-h="2" data-a="0">Duo<small>2 players</small></button>
+          <button data-v="squad" data-h="4" data-a="0" class="on">Squad<small>4 players</small></button>
+          <button data-v="penta" data-h="5" data-a="0">Penta<small>5 players</small></button>
+          <button data-v="solo" data-h="1" data-a="3">Solo<small>you vs 3 AI</small></button>
+          <button data-v="custom">Custom<small>pick below</small></button>
+        </div>
+        <div class="counts">
+          <div class="stepper"><span>👤 Real players</span><button data-step="h" data-d="-1">−</button><b id="hCount">4</b><button data-step="h" data-d="1">+</button></div>
+          <div class="stepper"><span>🤖 AI kingdoms</span><button data-step="a" data-d="-1">−</button><b id="aCount">0</b><button data-step="a" data-d="1">+</button></div>
+        </div>
+        <p class="dim small" id="countsHint"></p>
+        <label>Visibility</label>
+        <div class="seg" id="visSeg">
+          <button data-v="public" class="on">🌍 Public<small>listed online</small></button>
+          <button data-v="private">🔒 Private<small>code / invite only</small></button>
+        </div>
+        <label>World size</label>
+        <div class="seg" id="sizeSeg">
+          <button data-v="large">Large<small>512²</small></button>
+          <button data-v="huge" class="on">Huge<small>768²</small></button>
+          <button data-v="giant">Giant<small>1024²</small></button>
+          <button data-v="colossal">Colossal<small>1536²</small></button>
+          <button data-v="mega">Mega<small>2048²</small></button>
+        </div>
+        <label>World</label>
+        <div class="seg" id="worldSeg">
+          <button data-v="random" class="on">🎲 Random<small>new continents</small></button>
+          <button data-v="india">🗺️ India<small>real map</small></button>
+          <button data-v="earth">🌍 Earth<small>real world</small></button>
+        </div>
+        <label>Names</label>
+        <div class="seg" id="namesSeg">
+          <button data-v="india" class="on">🪔 Indian<small>Maurya, Rampur…</small></button>
+          <button data-v="fantasy">🏰 Fantasy<small>Ashvale, Oakford…</small></button>
+        </div>
+        <p class="dim small" id="worldHint"></p>
+        <label class="check"><input type="checkbox" id="bots" checked> AI regents rule empty player slots until a friend joins and takes over</label>
+        <button id="createBtn" class="primary">Create &amp; play</button>
+      </div>
+      <div class="glass panel">
+        <h2>Join a room <span id="onlineStats" class="dim small"></span></h2>
+        <div class="row"><input id="joinCode" maxlength="5" placeholder="CODE"><button id="joinBtn" class="primary sm">Join</button></div>
+        <div id="roomList"><p class="dim">No rooms yet, create one!</p></div>
+        <button id="refreshBtn" class="ghost">↻ Refresh</button>
+      </div>
+    </div>
+    <p id="aiStatus" class="ai-status"></p>
+    <p id="lobbyErr" class="err"></p>
+  </div>
+</div>
+
+<!-- ===================== HUD ===================== -->
+<div id="hud" class="hidden">
+  <div id="topLeft" class="glass">
+    <div id="kName"></div>
+    <div class="bar"><div id="hpFill"></div><span id="hpText"></span></div>
+    <div id="vehicleInfo"></div>
+    <div id="goals"></div>
+  </div>
+
+  <div id="topRight" class="glass">
+    <div class="mm-head"><span id="clock">☀️ 08:00</span><span id="roomInfo"></span></div>
+    <canvas id="minimap" width="220" height="220"></canvas>
+    <div id="scores"></div>
+    <div class="hudbtns"><button id="invite" title="Copy a link friends can open to join this room">🔗 Invite</button><button id="homeBtn" title="Back to the home page (your kingdom is saved, Continue brings you back)">🏠 Home</button></div>
+  </div>
+  <div id="netStatus" class="hidden"></div>
+
+  <div id="toolbar">
+    <button data-p="build" title="Build (B)"><span>🏰</span><b>Build</b><kbd>B</kbd></button>
+    <button data-p="army" title="Raise units (U)"><span>⚔️</span><b>Army</b><kbd>U</kbd></button>
+    <button data-p="forge" title="AI Forge (F)"><span>✨</span><b>Forge</b><kbd>F</kbd></button>
+    <button data-p="jmc" title="Joint Military Command: alliances and joint operations (J)"><span>🛡️</span><b>Joint HQ</b><kbd>J</kbd></button>
+    <button data-p="help" title="Help (H)"><span>❔</span><b>Help</b><kbd>H</kbd></button>
+    <button id="cmdToggle" title="Command mode: select units and give orders (Q)"><span>🎖</span><b>Command</b><kbd>Q</kbd></button>
+  </div>
+
+  <div id="weapons" class="glass"></div>
+
+  <div id="cmdbar" class="glass">
+    <span class="lbl">Army</span>
+    <button data-cmd="follow">Follow <kbd>Z</kbd></button>
+    <button data-cmd="guard">Guard <kbd>X</kbd></button>
+    <button data-cmd="attack">Attack <kbd>C</kbd></button>
+    <button data-cmd="wander">At ease <kbd>V</kbd></button>
+    <button id="talkBtn">💬 Talk <kbd>T</kbd></button>
+  </div>
+
+  <div id="log"></div>
+  <input id="chatInput" class="hidden" maxlength="200" placeholder="Say something to everyone… (Enter)">
+  <div id="toast"></div>
+  <div id="dead" class="hidden"><h2>YOU FELL</h2><p id="respawnIn"></p></div>
+
+  <div id="pBuild" class="side glass hidden">
+    <h3>Build</h3>
+    <p class="sub">Click the map to place · right-click / Esc cancels · Shift keeps placing</p>
+    <input id="buildSearch" class="search" placeholder="Search buildings…">
+    <div id="buildTabs" class="tabs"></div>
+    <div id="buildList" class="grid"></div>
+  </div>
+  <div id="pArmy" class="side glass hidden">
+    <h3>Raise units</h3>
+    <p class="sub">Free · spawn next to you · cap 90 army + 60 civilians</p>
+    <input id="armySearch" class="search" placeholder="Search units… (AMCA, BrahMos, auto…)">
+    <div id="armyTabs" class="tabs"></div>
+    <div id="armyList" class="grid"></div>
+  </div>
+  <div id="pForge" class="side glass hidden">
+    <h3>AI Forge</h3>
+    <p class="sub" id="forgeAi"></p>
+    <div class="seg" id="forgeSeg">
+      <button data-v="npc" class="on">NPC</button>
+      <button data-v="weapon">Weapon</button>
+      <button data-v="vehicle">Vehicle</button>
+      <button data-v="building">Building</button>
+    </div>
+    <textarea id="forgePrompt" maxlength="400" placeholder="Describe anything…&#10;e.g. a dragon knight riding a fire-breathing wyvern&#10;a plasma railgun · a stealth bomber · a wizard tower that shoots lightning"></textarea>
+    <button id="forgeBtn" class="primary">✨ Forge it</button>
+    <p id="forgeStatus" class="dim"></p>
+    <h4>Realm catalogue</h4>
+    <div id="catalog" class="grid"></div>
+  </div>
+  <div id="pJmc" class="side glass hidden jmc">
+    <h3>🛡️ Joint Military Command</h3>
+    <p class="sub" id="jmcSub">Alliances, joint operations and the coalition radio</p>
+    <div id="jmcBody"></div>
+  </div>
+  <div id="pHelp" class="side glass hidden">
+    <h3>How to play</h3>
+    <ul>
+      <li><kbd>WASD</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Mouse</kbd> aim · <kbd>LMB</kbd> fire</li>
+      <li><kbd>1-9</kbd> / <kbd>Shift</kbd>+wheel weapons · <kbd>Wheel</kbd> zoom</li>
+      <li><kbd>E</kbd> board any vehicle you're standing next to: your own (its AI crew hops out), an <b>EMPTY</b> one anywhere (even an enemy's) or a wild horse. AI pilots and drivers crew every other vehicle and re-board empty ones.</li>
+      <li><b>Flying:</b> jets roll down an airport runway (hold W or press <kbd>L</kbd>) to take off, turn with momentum, and land with <kbd>L</kbd> when lined up over a runway or carrier deck. Helicopters lift off / land anywhere with <kbd>L</kbd>. <kbd>Shift</kbd> afterburner · <kbd>E</kbd><kbd>E</kbd> eject · <kbd>RMB</kbd> homing missiles lock onto the enemy nearest your cursor.</li>
+      <li><b>Driving:</b> tanks and ships accelerate, turn and brake realistically; steer against your heading to reverse. Tank turrets follow the mouse.</li>
+      <li>Every kingdom has an <b>airport</b> and a fenced <b>military base</b>. Abandoned airfields hide empty jets you can steal!</li>
+      <li><b>Free towns</b> dot the map. Order troops to Attack a town hall and hold it with no defenders for 6 s to capture it.</li>
+      <li>Wolves, bears and sharks hunt; deer, rabbits and eagles flee. <b>Aliens</b> invade every few minutes!</li>
+      <li><b>Command mode</b> <kbd>Q</kbd> (or hold <kbd>Ctrl</kbd>): click a unit or drag a box to select. <b>Right-click</b> = smart order: move, attack an enemy, or <b>board an EMPTY vehicle</b>. The unit card has Talk, Follow, Hold, Move, Attack, Board, Get out (<kbd>G</kbd>), Take off and Land (<kbd>L</kbd>).</li>
+      <li><b>Pilots</b> fly any aircraft, soldiers drive tanks, trucks and boats. Tell a selected pilot <i>&quot;take the helicopter and attack&quot;</i> or <i>&quot;land and get out&quot;</i>: they remember your conversation.</li>
+      <li><kbd>Z X C V</kbd> orders go to the selected units (or the whole army if none; <kbd>Alt</kbd> = nearby only) · <kbd>T</kbd> talk to the selected unit · <kbd>L</kbd> in a jet = autopilot landing at the nearest runway</li>
+      <li><b>Joint HQ</b> <kbd>J</kbd>: propose alliances (allies never shoot each other and share hospitals), then launch <b>joint operations</b>: Strike, Defense, Capture Town or Air Patrol. Forces from every allied kingdom gather at a staging point, then attack together: armour first, infantry behind, artillery from range, aircraft overhead. Set how much of your army joins your allies' operations.</li>
+      <li><b>Real worlds:</b> pick <b>India</b> or <b>Earth</b> in the lobby for real coastlines, mountains, deserts and rivers, with kingdoms at real capitals and real cities as towns. Indian towns have streets, shops, temples, traffic and trains; Himalayan villages have monasteries and prayer flags.</li>
+      <li><b>Missiles:</b> jets carry missiles on their pylons (you can see them). Hold the cursor over an enemy until the diamond turns red (LOCK) and press <kbd>RMB</kbd>: aircraft get air-to-air missiles, ground targets get air-to-ground missiles automatically. Pylons reload slowly in flight and fully once you land. <kbd>Space</kbd> drops flares that can decoy missiles chasing you; AI pilots use them too.</li>
+      <li><b>Traffic:</b> autos, taxis, buses, scooters and lorries drive on the left. Press <kbd>E</kbd> next to one to grab it (the driver runs off). Ambulances and army supply trucks heal troops around them.</li>
+      <li><b>Indian arsenal:</b> HAL AMCA (stealth, hard to spot), Su-30MKI and BrahMos launchers, BrahMos batteries and Kolkata-class destroyers fire the long-range BrahMos cruise missile. Also Para SF commandos, snipers, K9 Vajra, Pinaka, BMP-2, INS Vikrant.</li>
+      <li>Click your kingdom name (top-left) or use Joint HQ to <b>rename</b> your kingdom and towns. <b>🏠 Home</b> (top-right) returns to the lobby; your kingdom is saved. The <b>📚 Gallery</b> shows every unit and building.</li>
+      <li><kbd>B</kbd> build · <kbd>U</kbd> raise units · <kbd>F</kbd> forge anything with AI · <kbd>Enter</kbd> chat · <kbd>M</kbd> music</li>
+      <li>Day turns to night every 10 minutes: windows glow, torches flicker, and rain rolls in from time to time.</li>
+    </ul>
+  </div>
+  <div id="talkBox" class="glass hidden">
+    <div id="talkWho"></div>
+    <div id="talkLog"></div>
+    <input id="talkInput" maxlength="300" placeholder="Talk or give orders… e.g. &quot;take the helicopter and attack&quot; · Enter to send · Esc to close">
+  </div>
+  <div id="unitCard" class="glass hidden"></div>
+</div>
+<script type="module" src="client.js"></script>
+</body>
+</html>

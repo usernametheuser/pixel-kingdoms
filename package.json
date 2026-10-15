@@ -1,0 +1,20 @@
+{
+  "name": "pixel-kingdoms",
+  "version": "1.0.0",
+  "description": "Real-time multiplayer pixel-art kingdom sandbox (Duo / Squad / Penta rooms) with AI NPCs and an AI forge. Inspired by Freeciv-web.",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --test tests/server-smoke.mjs tests/store-retention.mjs"
+  },
+  "license": "AGPL-3.0",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "topojson-client": "^3.1.0",
+    "world-atlas": "^2.0.2"
+  }
+}

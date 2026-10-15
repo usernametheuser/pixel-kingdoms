@@ -1,0 +1,58 @@
+name: pixel-kingdoms
+
+services:
+  game:
+    build: .
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    environment:
+      NODE_ENV: production
+      PORT: '8080'
+      SAVE_DIR: /data/saves
+      SAVE_DAYS: '0'
+      LOCAL_AI: 'off'
+      FREE_AI: '${FREE_AI:-on}'
+    volumes:
+      - worlds:/data/saves
+    expose:
+      - '8080'
+    healthcheck:
+      test: ['CMD', 'node', '-e', 'fetch("http://127.0.0.1:8080/healthz").then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))']
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  web:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      GAME_DOMAIN: '${GAME_DOMAIN:?Set GAME_DOMAIN in .env to your public hostname}'
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificates:/data
+      - caddy_config:/config
+    depends_on:
+      game:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+volumes:
+  worlds:
+    name: pixel-kingdoms-worlds
+  certificates:
+  caddy_config:
